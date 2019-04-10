@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace AppProxy
@@ -16,10 +18,10 @@ namespace AppProxy
         {
             try
             {
-                var pathFile = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.Desktop)).FullName
-                    + "\\"
-                    + Path.GetFileName(Application.ExecutablePath)
-                    + ".path";
+                var userFolder = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.Desktop)).FullName;
+                var appExe = Path.GetFileName(Application.ExecutablePath);
+                var pathFile = userFolder + "\\" + appExe + ".path";
+                //var logFile = userFolder + "\\" + appExe + ".log";
 
                 if (!File.Exists(pathFile))
                 {
@@ -28,12 +30,26 @@ namespace AppProxy
 
                 Process app = new Process();
                 app.StartInfo.FileName = File.ReadAllText(pathFile).Trim();
-
+                
                 if (File.Exists(app.StartInfo.FileName))
                 {
                     if (args.Length > 0)
                     {
-                        app.StartInfo.Arguments = string.Join(" ", args);
+                        var commandArgs = Regex.Replace(Environment.CommandLine, @"^.+?\.exe""?\s*", "", RegexOptions.IgnoreCase);
+                        //File.WriteAllText(logFile, commandArgs);
+
+                        if (!String.IsNullOrEmpty(commandArgs))
+                        {
+                            if (!commandArgs.Contains("\""))
+                            {
+                                if (File.Exists(commandArgs))
+                                {
+                                    commandArgs = "\"" + commandArgs + "\"";
+                                }
+                            }
+                        }
+
+                        app.StartInfo.Arguments = commandArgs;
                     }
 
                     app.Start();
